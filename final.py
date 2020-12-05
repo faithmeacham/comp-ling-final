@@ -1,6 +1,7 @@
 import csv
 import nltk
 
+# download csv file from https://www.kaggle.com/jrobischon/wikipedia-movie-plots, save as movie_plots.csv and place in same directory
 
 # dictionary format- title: (year, plot)
 movies = {}
