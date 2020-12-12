@@ -33,12 +33,14 @@ pos_counts = {}
 # dictionary format- year: num of negatives
 neg_counts = {}
 
+# used to classify some plots for training and testing purposes
 def hand_classify(genre):
     if 'war' in genre or 'crime' in genre or 'horror' in genre or 'melodrama' in genre or 'propaganda' in genre:
         return 'negative'
     elif 'comedy' in genre or 'animation' in genre or 'romance' in genre or 'family' in genre:
         return 'positive'
 
+# parses, lemmatizes and filters plot text 
 def process(text):
     tokens = word_tokenize(text)
     lemmatizer = WordNetLemmatizer()
@@ -57,6 +59,7 @@ def process(text):
             cleaned_tokens.append(token.lower())
     return cleaned_tokens
 
+# returns all tokens in the dictionary in a list
 def all_tokens(dic):
     toks = []
     for tokens in dic:
@@ -64,12 +67,14 @@ def all_tokens(dic):
             toks.append(token)
     return toks
 
+# returns tokens in the format needed for the model
 def tokens_model(dic):
     tok_dics = []
     for title, tokens in dic.items():
         tok_dics.append(dict([token, True] for token in tokens))
     return tok_dics
 
+# opens file and uses process to clean text and store it in appropriate dictionaries
 with open('movie_plots.csv') as plots:
     csv_reader = csv.reader(plots, delimiter=',')
     c = 1
@@ -77,6 +82,7 @@ with open('movie_plots.csv') as plots:
         tokens = process(row[7])
         movies[row[1]] = (row[0], row[7])
         m_tokens[row[1]] = tokens
+        # fills out dictionary with training and testing data
         if hand_classify(row[5]) == 'negative':
             neg_movies[row[1]] = (row[0], row[7])
             nm_tokens[row[1]] = tokens
@@ -94,29 +100,36 @@ freq_dist_neg = FreqDist(all_neg_words)
 p_model_toks = tokens_model(pm_tokens)
 n_model_toks = tokens_model(nm_tokens)
 
+# builds dictionaries for hand labeled postive and negative testing/training data
 p_data = [(tdict, "Positive") for tdict in p_model_toks]
 n_data = [(tdict, "Negative") for tdict in n_model_toks]
+# joins and shuffles all test/training data 
 full_data = p_data + n_data
 random.shuffle(full_data)
 
+# divides training/testing data on a 70-30 split
 train_data = full_data[:5000]
 test_data = full_data[5000:]
 
+# trains and tests model
 classifier = NaiveBayesClassifier.train(train_data)
 print("Accuracy is:", classify.accuracy(classifier, test_data))
 
 print(classifier.show_most_informative_features(10))
 
+# uses trained model to classify all movies
 for title, tokens in m_tokens.items():
     year = movies[title][0]
     classified_movies[title] = (year, classifier.classify(dict([token, True] for token in tokens)))
 
+# prefills count dictionaries with all the years as keys
 for year in range(1901, 2018):
     pos_counts[str(year)] = 0
     neg_counts[str(year)] = 0
 pos_counts['Release Year'] = 0
 neg_counts['Release Year'] = 0
 
+# finds and stores number of positive and negative movies for each year
 for value in classified_movies.values():
     if value[1] == "Positive":
         pos_counts[value[0]] = pos_counts[value[0]] + 1
